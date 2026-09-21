@@ -202,7 +202,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
                       key={mode}
                       className={cn(
                         ghostButtonClass,
-                        "h-9 cursor-pointer px-2",
+                        "h-9 cursor-pointer px-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-meter",
                         stateMode === mode && "border-meter bg-inset",
                       )}
                     >
@@ -329,7 +329,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
             ) : null}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {pane === "request" ? (
               <JsonBlock value={requestJson} />
             ) : pane === "response" ? (
@@ -583,7 +583,7 @@ function AnswerList({
           <li key={id} className="flex flex-col gap-2">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="font-mono text-sm">{id}</h3>
-              <p className="text-mute text-xs">
+              <p className="font-mono text-mute text-xs tabular-nums">
                 {answer.type}
                 {confidence[id] != null
                   ? ` · confidence ${formatProbability(confidence[id])}`

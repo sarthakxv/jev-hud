@@ -310,7 +310,7 @@ export function buildPayload(
 
     const instructions = draft.instructions.trim();
     if (!instructions) {
-      return { ok: false, error: `Question "${key}" needs instructions.` };
+      return { ok: false, error: `Question “${key}” needs instructions.` };
     }
 
     if (draft.type === "boolean") {
@@ -339,7 +339,7 @@ export function buildPayload(
         if (optionKey in criteria) {
           return {
             ok: false,
-            error: `Question "${key}" has a duplicate option: ${optionKey}`,
+            error: `Question “${key}” has a duplicate option: ${optionKey}`,
           };
         }
         criteria[optionKey] = option.description.trim();
@@ -347,7 +347,7 @@ export function buildPayload(
       if (Object.keys(criteria).length === 0) {
         return {
           ok: false,
-          error: `Question "${key}" needs at least one choice option.`,
+          error: `Question “${key}” needs at least one choice option.`,
         };
       }
       questions[key] = { type: "choice", instructions, criteria };
@@ -356,12 +356,12 @@ export function buildPayload(
 
     const criteria = draft.levels.map((level) => level.label.trim());
     if (criteria.some((label) => !label)) {
-      return { ok: false, error: `Question "${key}" has an empty score level.` };
+      return { ok: false, error: `Question “${key}” has an empty score level.` };
     }
     if (criteria.length < 2) {
       return {
         ok: false,
-        error: `Question "${key}" needs at least two score levels.`,
+        error: `Question “${key}” needs at least two score levels.`,
       };
     }
     questions[key] = { type: "score", instructions, criteria };
