@@ -33,18 +33,18 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: "/icon-512.png",
-        width: 512,
-        height: 512,
-        alt: title,
+        url: "/og_image.png",
+        width: 1731,
+        height: 909,
+        alt: "Jev HUD. Make AI decisions explicit.",
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title,
     description,
-    images: ["/icon-512.png"],
+    images: ["/og_image.png"],
   },
 };
 
