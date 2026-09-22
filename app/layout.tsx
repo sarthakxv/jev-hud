@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, IBM_Plex_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -15,9 +15,41 @@ const ibmMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
+const title = "Jev HUD";
+const description =
+  "Test TypeSafe Jev. Send a state, define questions, and inspect the evaluation.";
+
 export const metadata: Metadata = {
-  title: "jev-hud",
-  description: "Test Jev input and output through Vercel AI Gateway.",
+  metadataBase: new URL("https://jevhud.vercel.app"),
+  title,
+  description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: title,
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: title,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title,
+    description,
+    images: ["/icon-512.png"],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -183,11 +183,20 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
       </a>
 
       <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
-        <div className="mr-auto min-w-0">
-          <h1 className="text-balance font-medium">jev-hud</h1>
-          <p className="truncate font-mono text-muted-foreground text-xs">
-            typesafe-ai/jev
-          </p>
+        <div className="mr-auto flex min-w-0 items-center gap-2.5">
+          <img
+            src="/logo.png"
+            alt=""
+            width={32}
+            height={32}
+            className="size-8 shrink-0"
+          />
+          <div className="min-w-0">
+            <h1 className="text-balance font-medium">jev-hud</h1>
+            <p className="truncate font-mono text-muted-foreground text-xs">
+              typesafe-ai/jev
+            </p>
+          </div>
         </div>
 
         <ToggleGroup
