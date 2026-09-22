@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist, IBM_Plex_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full bg-background font-sans text-foreground">
         {children}
+        <Analytics />
       </body>
     </html>
   );
