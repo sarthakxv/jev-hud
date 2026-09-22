@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +92,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<EvaluateSuccess | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [pane, setPane] = useState<Pane>("answers");
 
   const built = useMemo(
@@ -113,6 +114,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
     setQuestions(loaded.questions);
     setError(null);
     setResult(null);
+    setElapsedMs(null);
   }
 
   function updateQuestion(id: string, patch: Partial<QuestionDraft>) {
@@ -136,7 +138,9 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
 
     setBusy(true);
     setError(null);
+    setElapsedMs(null);
     setPane("answers");
+    const started = performance.now();
 
     try {
       const response = await fetch("/api/evaluate", {
@@ -159,22 +163,29 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
       setResult(null);
       setError(cause instanceof Error ? cause.message : "Request failed.");
     } finally {
+      setElapsedMs(performance.now() - started);
       setBusy(false);
     }
   }
 
   const status = error ?? (!built.ok ? built.error : null);
+  const runEvaluateRef = useRef(runEvaluate);
+  runEvaluateRef.current = runEvaluate;
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const enter =
+        event.key === "Enter" || event.code === "Enter" || event.code === "NumpadEnter";
+      if (!enter || event.repeat || (!event.ctrlKey && !event.metaKey)) return;
+      event.preventDefault();
+      void runEvaluateRef.current();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
-    <div
-      className="flex h-dvh flex-col bg-background text-foreground"
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-          event.preventDefault();
-          void runEvaluate();
-        }
-      }}
-    >
+    <div className="flex h-dvh flex-col bg-background text-foreground">
       <a
         href="#state"
         className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-10 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2"
@@ -192,7 +203,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
             className="size-8 shrink-0"
           />
           <div className="min-w-0">
-            <h1 className="text-balance font-medium">jev-hud</h1>
+            <h1 className="text-balance font-medium">Jev HUD</h1>
             <p className="truncate font-mono text-muted-foreground text-xs">
               typesafe-ai/jev
             </p>
@@ -218,7 +229,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
         </ToggleGroup>
 
         <Badge variant={hasKey ? "secondary" : "destructive"}>
-          {hasKey ? "API key ready" : "API key missing"}
+          {hasKey ? "Services online" : "Services offline"}
         </Badge>
 
         <div className="flex items-center gap-3">
@@ -370,11 +381,19 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
                   }
                 }}
               >
-                <TabsList>
-                  <TabsTrigger value="answers">Answers</TabsTrigger>
-                  <TabsTrigger value="request">Request</TabsTrigger>
-                  <TabsTrigger value="response">Response</TabsTrigger>
-                </TabsList>
+                <div className="flex items-center justify-between gap-3">
+                  <TabsList>
+                    <TabsTrigger value="answers">Answers</TabsTrigger>
+                    <TabsTrigger value="request">Request</TabsTrigger>
+                    <TabsTrigger value="response">Response</TabsTrigger>
+                  </TabsList>
+                  {elapsedMs != null && !busy ? (
+                    <p className="shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
+                      <span className="sr-only">Evaluation time </span>
+                      {formatDuration(elapsedMs)}
+                    </p>
+                  ) : null}
+                </div>
                 <TabsContent value="answers" className="pt-1">
                   {busy ? (
                     <AnswerSkeleton count={questions.length} />
@@ -892,6 +911,12 @@ function AnswerSkeleton({ count }: { count: number }) {
       ))}
     </div>
   );
+}
+
+function formatDuration(ms: number) {
+  if (ms < 1000) return `${Math.max(1, Math.round(ms))}ms`;
+  const seconds = ms / 1000;
+  return `${seconds.toFixed(seconds < 10 ? 2 : 1)}s`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
