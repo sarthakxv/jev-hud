@@ -1,38 +1,157 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --canvas: #d3dce6;
-  --ink: #1b2633;
-  --mute: #5a6878;
-  --panel: #eef2f7;
-  --inset: #e2e8ef;
-  --line: #c3ccd6;
-  --meter: #1e4ea3;
-  --danger: #9f2a22;
+  --radius: 0.75rem;
+  --background: oklch(0.16 0.012 264);
+  --foreground: oklch(0.96 0.006 264);
+  --card: oklch(0.21 0.014 264);
+  --card-foreground: oklch(0.96 0.006 264);
+  --popover: oklch(0.23 0.014 264);
+  --popover-foreground: oklch(0.96 0.006 264);
+  --primary: oklch(0.546 0.19 262);
+  --primary-foreground: oklch(0.985 0.005 264);
+  --secondary: oklch(0.26 0.014 264);
+  --secondary-foreground: oklch(0.96 0.006 264);
+  --muted: oklch(0.28 0.012 264);
+  --muted-foreground: oklch(0.72 0.02 264);
+  --accent: oklch(0.28 0.02 262);
+  --accent-foreground: oklch(0.96 0.006 264);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.546 0.19 262);
+  --chart-1: oklch(0.546 0.19 262);
+  --chart-2: oklch(0.72 0.02 264);
+  --chart-3: oklch(0.56 0.02 264);
+  --chart-4: oklch(0.4 0.015 264);
+  --chart-5: oklch(0.28 0.012 264);
+  --sidebar: oklch(0.21 0.014 264);
+  --sidebar-foreground: oklch(0.96 0.006 264);
+  --sidebar-primary: oklch(0.546 0.19 262);
+  --sidebar-primary-foreground: oklch(0.985 0.005 264);
+  --sidebar-accent: oklch(0.28 0.02 262);
+  --sidebar-accent-foreground: oklch(0.96 0.006 264);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.546 0.19 262);
+}
+
+.dark {
+  --background: oklch(0.16 0.012 264);
+  --foreground: oklch(0.96 0.006 264);
+  --card: oklch(0.21 0.014 264);
+  --card-foreground: oklch(0.96 0.006 264);
+  --popover: oklch(0.23 0.014 264);
+  --popover-foreground: oklch(0.96 0.006 264);
+  --primary: oklch(0.546 0.19 262);
+  --primary-foreground: oklch(0.985 0.005 264);
+  --secondary: oklch(0.26 0.014 264);
+  --secondary-foreground: oklch(0.96 0.006 264);
+  --muted: oklch(0.28 0.012 264);
+  --muted-foreground: oklch(0.72 0.02 264);
+  --accent: oklch(0.28 0.02 262);
+  --accent-foreground: oklch(0.96 0.006 264);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.546 0.19 262);
+  --chart-1: oklch(0.546 0.19 262);
+  --chart-2: oklch(0.72 0.02 264);
+  --chart-3: oklch(0.56 0.02 264);
+  --chart-4: oklch(0.4 0.015 264);
+  --chart-5: oklch(0.28 0.012 264);
+  --sidebar: oklch(0.21 0.014 264);
+  --sidebar-foreground: oklch(0.96 0.006 264);
+  --sidebar-primary: oklch(0.546 0.19 262);
+  --sidebar-primary-foreground: oklch(0.985 0.005 264);
+  --sidebar-accent: oklch(0.28 0.02 262);
+  --sidebar-accent-foreground: oklch(0.96 0.006 264);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.546 0.19 262);
 }
 
 @theme inline {
-  --color-canvas: var(--canvas);
-  --color-ink: var(--ink);
-  --color-mute: var(--mute);
-  --color-panel: var(--panel);
-  --color-inset: var(--inset);
-  --color-line: var(--line);
-  --color-meter: var(--meter);
-  --color-danger: var(--danger);
-  --font-sans: var(--font-ibm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-ibm-mono), ui-monospace, monospace;
+  --font-heading: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-html,
-body {
-  background: var(--canvas);
-  color: var(--ink);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-textarea,
-input,
-select,
-button {
-  font: inherit;
+/* Thin thumb, transparent track, so the bar floats inside its pane. */
+.pane-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 28%, transparent) transparent;
+}
+
+.pane-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pane-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 10px;
+}
+
+.pane-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-color: color-mix(in oklch, var(--foreground) 28%, transparent);
+  background-clip: padding-box;
+}
+
+.pane-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklch, var(--foreground) 46%, transparent);
 }

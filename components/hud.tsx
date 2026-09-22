@@ -1,7 +1,33 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { cn } from "@/lib/cn";
+import { Flag } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   blankQuestion,
   buildPayload,
@@ -42,11 +68,19 @@ type EvaluateSuccess = {
   response?: { id?: string; timestamp?: string; modelId?: string };
 };
 
-const fieldClass =
-  "w-full rounded-sm border border-line bg-inset px-2 py-2 text-sm text-ink outline-none placeholder:text-mute focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-meter";
+type Pane = "answers" | "request" | "response";
 
-const ghostButtonClass =
-  "inline-flex h-10 items-center justify-center rounded-sm border border-line bg-panel px-3 text-sm text-ink hover:bg-inset focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-meter disabled:opacity-50";
+const TYPE_ITEMS = [
+  { value: "boolean", label: "boolean" },
+  { value: "choice", label: "choice" },
+  { value: "score", label: "score" },
+] as const;
+
+const TYPE_LABEL: Record<QuestionType, string> = {
+  boolean: "Bool",
+  choice: "Choice",
+  score: "Score",
+};
 
 export function Hud({ hasKey }: { hasKey: boolean }) {
   const [stateMode, setStateMode] = useState<StateMode>(DEFAULT_EXAMPLE.stateMode);
@@ -58,7 +92,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<EvaluateSuccess | null>(null);
-  const [pane, setPane] = useState<"answers" | "request" | "response">("answers");
+  const [pane, setPane] = useState<Pane>("answers");
 
   const built = useMemo(
     () => buildPayload(stateMode, stateText, questions),
@@ -66,11 +100,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
   );
 
   const requestJson = built.ok
-    ? JSON.stringify(
-        { model: "typesafe-ai/jev", ...built.payload },
-        null,
-        2,
-      )
+    ? JSON.stringify({ model: "typesafe-ai/jev", ...built.payload }, null, 2)
     : built.error;
 
   function applyExample(id: string) {
@@ -94,6 +124,7 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
   }
 
   async function runEvaluate() {
+    if (busy) return;
     if (!built.ok) {
       setError(built.error);
       return;
@@ -132,225 +163,236 @@ export function Hud({ hasKey }: { hasKey: boolean }) {
     }
   }
 
+  const status = error ?? (!built.ok ? built.error : null);
+
   return (
-    <div className="flex h-dvh flex-col bg-canvas text-ink">
+    <div
+      className="flex h-dvh flex-col bg-background text-foreground"
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          void runEvaluate();
+        }
+      }}
+    >
       <a
         href="#state"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:bg-panel focus:px-3 focus:py-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-10 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2"
       >
         Skip to state
       </a>
 
-      <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-balance font-medium text-lg">jev-hud</h1>
-          <p className="truncate font-mono text-mute text-xs">
-            typesafe-ai/jev · AI Gateway
+      <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
+        <div className="mr-auto min-w-0">
+          <h1 className="text-balance font-medium">jev-hud</h1>
+          <p className="truncate font-mono text-muted-foreground text-xs">
+            typesafe-ai/jev
           </p>
         </div>
-        <p
-          className={cn(
-            "font-mono text-xs",
-            hasKey ? "text-ink" : "text-danger",
-          )}
+
+        <ToggleGroup
+          variant="outline"
+          size="sm"
+          spacing={0}
+          value={[activeExample]}
+          onValueChange={(value) => {
+            const next = value[0];
+            if (next) applyExample(next);
+          }}
+          aria-label="Example payloads"
         >
-          {hasKey ? "AI_GATEWAY_API_KEY ready" : "AI_GATEWAY_API_KEY missing"}
-        </p>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Example payloads">
           {EXAMPLES.map((example) => (
-            <button
-              key={example.id}
-              type="button"
-              className={cn(
-                ghostButtonClass,
-                "h-9",
-                activeExample === example.id && "border-meter bg-inset",
-              )}
-              onClick={() => applyExample(example.id)}
-            >
+            <ToggleGroupItem key={example.id} value={example.id}>
               {example.label}
-            </button>
+            </ToggleGroupItem>
           ))}
+        </ToggleGroup>
+
+        <Badge variant={hasKey ? "secondary" : "destructive"}>
+          {hasKey ? "API key ready" : "API key missing"}
+        </Badge>
+
+        <div className="flex items-center gap-3">
+          {status ? null : (
+            <p className="text-muted-foreground text-xs">⌘/Ctrl + Enter</p>
+          )}
+          <Button type="submit" form="evaluate" disabled={busy}>
+            {busy ? "Evaluating" : "Evaluate"}
+          </Button>
         </div>
+
+        {status ? (
+          <p role="alert" className="basis-full text-pretty text-destructive text-sm">
+            {status}
+          </p>
+        ) : null}
       </header>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-2">
-        <section className="flex min-h-0 flex-col border-line border-b lg:border-r lg:border-b-0">
-          <form
-            className="flex min-h-0 flex-1 flex-col"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void runEvaluate();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto lg:overflow-hidden">
+        <div className="grid min-w-0 lg:h-full lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]">
+          <section className="pane-scroll min-h-0 min-w-0 border-b lg:overflow-y-auto lg:border-r lg:border-b-0">
+            <form
+              id="evaluate"
+              className="flex min-w-0 flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+              onSubmit={(event) => {
                 event.preventDefault();
                 void runEvaluate();
-              }
-            }}
-          >
-            <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <label htmlFor="state" className="text-sm">
-                  State
-                </label>
-                <fieldset className="flex gap-1">
-                  <legend className="sr-only">State format</legend>
-                  {(["text", "json"] as const).map((mode) => (
-                    <label
-                      key={mode}
-                      className={cn(
-                        ghostButtonClass,
-                        "h-9 cursor-pointer px-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-meter",
-                        stateMode === mode && "border-meter bg-inset",
-                      )}
+              }}
+            >
+              <Card className="min-w-0">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-normal text-muted-foreground text-sm">
+                    <Flag className="size-3.5" aria-hidden="true" />
+                    Request · State
+                  </CardTitle>
+                  <CardAction>
+                    <ToggleGroup
+                      variant="outline"
+                      size="sm"
+                      spacing={0}
+                      value={[stateMode]}
+                      onValueChange={(value) => {
+                        const next = value[0];
+                        if (next === "text" || next === "json") setStateMode(next);
+                      }}
+                      aria-label="State format"
                     >
-                      <input
-                        type="radio"
-                        name="state-mode"
-                        value={mode}
-                        checked={stateMode === mode}
-                        onChange={() => setStateMode(mode)}
-                        className="sr-only"
-                      />
-                      {mode}
-                    </label>
-                  ))}
-                </fieldset>
-              </div>
-              <textarea
-                id="state"
-                value={stateText}
-                onChange={(event) => setStateText(event.target.value)}
-                spellCheck={stateMode === "text"}
-                rows={stateMode === "json" ? 12 : 8}
-                className={cn(fieldClass, "min-h-40 resize-y font-mono")}
-              />
-            </div>
+                      <ToggleGroupItem value="text">Text</ToggleGroupItem>
+                      <ToggleGroupItem value="json">JSON</ToggleGroupItem>
+                    </ToggleGroup>
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <Label htmlFor="state" className="sr-only">
+                    State
+                  </Label>
+                  <Textarea
+                    id="state"
+                    value={stateText}
+                    onChange={(event) => setStateText(event.target.value)}
+                    spellCheck={stateMode === "text"}
+                    rows={stateMode === "json" ? 12 : 8}
+                    className="min-h-44 resize-y bg-background font-mono text-sm"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    state: {stateMode === "text" ? "string" : "json"}
+                  </p>
+                </CardContent>
+                <CardFooter className="justify-between bg-transparent font-mono text-muted-foreground text-xs tabular-nums">
+                  <span>
+                    {questions.length}{" "}
+                    {questions.length === 1 ? "question" : "questions"}
+                  </span>
+                  {result?.usage?.inputTokens != null ? (
+                    <span>
+                      {result.usage.inputTokens} in
+                      {result.usage.outputTokens != null
+                        ? ` · ${result.usage.outputTokens} out`
+                        : ""}
+                    </span>
+                  ) : (
+                    <span>Not evaluated</span>
+                  )}
+                </CardFooter>
+              </Card>
 
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm">Questions</h2>
-                <div className="flex flex-wrap gap-1">
-                  {(["boolean", "choice", "score"] as const).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      className={cn(ghostButtonClass, "h-9")}
-                      onClick={() =>
-                        setQuestions((current) => [
-                          ...current,
-                          blankQuestion(type, current),
-                        ])
-                      }
-                    >
-                      Add {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {questions.length === 0 ? (
-                <p className="text-pretty text-mute text-sm">
-                  Add a boolean, choice, or score question.
-                </p>
-              ) : (
-                <ol className="flex flex-col gap-4">
-                  {questions.map((question) => (
-                    <li key={question.id}>
-                      <QuestionEditor
-                        question={question}
-                        onChange={(patch) => updateQuestion(question.id, patch)}
-                        onRemove={() =>
-                          setQuestions((current) =>
-                            current.filter((item) => item.id !== question.id),
-                          )
+              <div className="flex min-w-0 flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-medium text-sm">Questions</h2>
+                  <div className="flex flex-wrap gap-1">
+                    {(["boolean", "choice", "score"] as const).map((type) => (
+                      <Button
+                        key={type}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setQuestions((current) => [
+                            ...current,
+                            blankQuestion(type, current),
+                          ])
                         }
-                      />
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
+                      >
+                        Add {type}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
 
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-3 border-line border-t bg-canvas px-4 py-3 ps-14 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              {error ? (
-                <p role="alert" className="mr-auto text-pretty text-danger text-sm">
-                  {error}
-                </p>
-              ) : !built.ok ? (
-                <p className="mr-auto text-pretty text-mute text-sm">{built.error}</p>
-              ) : (
-                <p className="mr-auto text-mute text-xs">⌘/Ctrl + Enter</p>
-              )}
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex h-11 min-w-32 items-center justify-center rounded-sm bg-meter px-4 text-sm text-panel hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
-              >
-                {busy ? "Evaluating" : "Evaluate"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="flex min-h-0 flex-col">
-          <div className="flex flex-wrap items-center gap-2 border-line border-b px-4 py-2">
-            {(
-              [
-                ["answers", "Answers"],
-                ["request", "Request"],
-                ["response", "Response"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={cn(
-                  ghostButtonClass,
-                  "h-9",
-                  pane === id && "border-meter bg-inset",
+                {questions.length === 0 ? (
+                  <Card size="sm">
+                    <CardHeader>
+                      <CardTitle className="text-balance text-sm">
+                        No questions yet
+                      </CardTitle>
+                      <CardDescription className="text-pretty">
+                        Add a boolean, choice, or score question.
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                ) : (
+                  <ol className="flex flex-col gap-3">
+                    {questions.map((question) => (
+                      <li key={question.id}>
+                        <QuestionEditor
+                          question={question}
+                          onChange={(patch) => updateQuestion(question.id, patch)}
+                          onRemove={() =>
+                            setQuestions((current) =>
+                              current.filter((item) => item.id !== question.id),
+                            )
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ol>
                 )}
-                onClick={() => setPane(id)}
-              >
-                {label}
-              </button>
-            ))}
-            {result?.usage?.inputTokens != null ? (
-              <p className="ml-auto font-mono text-mute text-xs tabular-nums">
-                {result.usage.inputTokens} in
-                {result.usage.outputTokens != null
-                  ? ` · ${result.usage.outputTokens} out`
-                  : ""}
-              </p>
-            ) : null}
-          </div>
+              </div>
+            </form>
+          </section>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {pane === "request" ? (
-              <JsonBlock value={requestJson} />
-            ) : pane === "response" ? (
-              result ? (
-                <JsonBlock value={JSON.stringify(result, null, 2)} />
-              ) : (
-                <EmptyOutput busy={busy} />
-              )
-            ) : busy ? (
-              <AnswerSkeleton count={questions.length} />
-            ) : result ? (
-              <AnswerList
-                answers={result.answers}
-                questions={questions}
-                confidence={readConfidence(result.providerMetadata)}
-              />
-            ) : (
-              <EmptyOutput busy={false} />
-            )}
-          </div>
-        </section>
+          <section className="min-h-0 min-w-0 lg:overflow-y-auto" aria-busy={busy}>
+            <div className="flex min-w-0 max-w-3xl flex-col gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <Tabs
+                value={pane}
+                onValueChange={(value) => {
+                  if (value === "answers" || value === "request" || value === "response") {
+                    setPane(value);
+                  }
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="answers">Answers</TabsTrigger>
+                  <TabsTrigger value="request">Request</TabsTrigger>
+                  <TabsTrigger value="response">Response</TabsTrigger>
+                </TabsList>
+                <TabsContent value="answers" className="pt-1">
+                  {busy ? (
+                    <AnswerSkeleton count={questions.length} />
+                  ) : result ? (
+                    <AnswerList
+                      answers={result.answers}
+                      questions={questions}
+                      confidence={readConfidence(result.providerMetadata)}
+                    />
+                  ) : (
+                    <EmptyOutput />
+                  )}
+                </TabsContent>
+                <TabsContent value="request" className="pt-1">
+                  <JsonBlock value={requestJson} />
+                </TabsContent>
+                <TabsContent value="response" className="pt-1">
+                  {result ? (
+                    <JsonBlock value={JSON.stringify(result, null, 2)} />
+                  ) : (
+                    <EmptyOutput />
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );
@@ -365,199 +407,234 @@ function QuestionEditor({
   onChange: (patch: Partial<QuestionDraft>) => void;
   onRemove: () => void;
 }) {
+  const keyId = `${question.id}-key`;
+  const typeId = `${question.id}-type`;
+  const instructionsId = `${question.id}-instructions`;
+
   return (
-    <fieldset className="flex flex-col gap-2 border border-line bg-panel p-3">
-      <legend className="px-1 text-mute text-xs">{question.type}</legend>
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,8rem)_minmax(0,7rem)_auto]">
-        <label className="flex flex-col gap-1 text-xs">
-          Key
-          <input
-            value={question.key}
-            onChange={(event) => onChange({ key: event.target.value })}
-            className={cn(fieldClass, "font-mono")}
+    <Card size="sm" className="min-w-0">
+      <CardHeader>
+        <div className="flex min-w-0 items-center gap-2">
+          <Badge className="uppercase">{TYPE_LABEL[question.type]}</Badge>
+          <span className="truncate font-mono text-muted-foreground text-sm">
+            {question.key.trim() || "untitled"}
+          </span>
+        </div>
+        <CardAction>
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+            Remove
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={keyId}>Key</Label>
+            <Input
+              id={keyId}
+              value={question.key}
+              onChange={(event) => onChange({ key: event.target.value })}
+              className="font-mono"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={typeId}>Type</Label>
+            <Select
+              items={TYPE_ITEMS}
+              value={question.type}
+              onValueChange={(value) => {
+                if (value !== "boolean" && value !== "choice" && value !== "score") {
+                  return;
+                }
+                const patch: Partial<QuestionDraft> = { type: value };
+                if (value === "choice" && question.options.length === 0) {
+                  patch.options = [
+                    { id: newId(), key: "a", description: "" },
+                    { id: newId(), key: "b", description: "" },
+                  ];
+                }
+                if (value === "score" && question.levels.length < 2) {
+                  patch.levels = [
+                    { id: newId(), label: "low" },
+                    { id: newId(), label: "medium" },
+                    { id: newId(), label: "high" },
+                  ];
+                }
+                onChange(patch);
+              }}
+            >
+              <SelectTrigger id={typeId} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                {TYPE_ITEMS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={instructionsId}>Instructions</Label>
+          <Textarea
+            id={instructionsId}
+            value={question.instructions}
+            onChange={(event) => onChange({ instructions: event.target.value })}
+            rows={2}
+            className="resize-y"
           />
-        </label>
-        <label className="flex flex-col gap-1 text-xs">
-          Type
-          <select
-            value={question.type}
-            onChange={(event) => {
-              const type = event.target.value as QuestionType;
-              const patch: Partial<QuestionDraft> = { type };
-              if (type === "choice" && question.options.length === 0) {
-                patch.options = [
-                  { id: newId(), key: "a", description: "" },
-                  { id: newId(), key: "b", description: "" },
-                ];
-              }
-              if (type === "score" && question.levels.length < 2) {
-                patch.levels = [
-                  { id: newId(), label: "low" },
-                  { id: newId(), label: "medium" },
-                  { id: newId(), label: "high" },
-                ];
-              }
-              onChange(patch);
-            }}
-            className={fieldClass}
-          >
-            <option value="boolean">boolean</option>
-            <option value="choice">choice</option>
-            <option value="score">score</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          className={cn(ghostButtonClass, "mt-5 h-10 justify-self-start")}
-          onClick={onRemove}
-        >
-          Remove
-        </button>
-      </div>
-      <label className="flex flex-col gap-1 text-xs">
-        Instructions
-        <textarea
-          value={question.instructions}
-          onChange={(event) => onChange({ instructions: event.target.value })}
-          rows={2}
-          className={cn(fieldClass, "resize-y")}
-        />
-      </label>
-
-      {question.type === "boolean" ? (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-xs">
-            True means
-            <input
-              value={question.trueCriteria}
-              onChange={(event) => onChange({ trueCriteria: event.target.value })}
-              className={fieldClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            False means
-            <input
-              value={question.falseCriteria}
-              onChange={(event) => onChange({ falseCriteria: event.target.value })}
-              className={fieldClass}
-            />
-          </label>
         </div>
-      ) : null}
 
-      {question.type === "choice" ? (
-        <div className="flex flex-col gap-2">
-          {question.options.map((option, index) => (
-            <div key={option.id} className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]">
-              <label className="flex flex-col gap-1 text-xs">
-                Option {index + 1}
-                <input
-                  value={option.key}
-                  onChange={(event) =>
-                    onChange({
-                      options: question.options.map((item) =>
-                        item.id === option.id
-                          ? { ...item, key: event.target.value }
-                          : item,
-                      ),
-                    })
-                  }
-                  className={cn(fieldClass, "font-mono")}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs">
-                Description
-                <input
-                  value={option.description}
-                  onChange={(event) =>
-                    onChange({
-                      options: question.options.map((item) =>
-                        item.id === option.id
-                          ? { ...item, description: event.target.value }
-                          : item,
-                      ),
-                    })
-                  }
-                  className={fieldClass}
-                />
-              </label>
-              <button
-                type="button"
-                className={cn(ghostButtonClass, "mt-5")}
-                onClick={() =>
-                  onChange({
-                    options: question.options.filter((item) => item.id !== option.id),
-                  })
-                }
-              >
-                Remove option
-              </button>
+        {question.type === "boolean" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`${question.id}-true`}>True means</Label>
+              <Input
+                id={`${question.id}-true`}
+                value={question.trueCriteria}
+                onChange={(event) => onChange({ trueCriteria: event.target.value })}
+              />
             </div>
-          ))}
-          <button
-            type="button"
-            className={cn(ghostButtonClass, "h-9 self-start")}
-            onClick={() =>
-              onChange({
-                options: [
-                  ...question.options,
-                  { id: newId(), key: "", description: "" },
-                ],
-              })
-            }
-          >
-            Add option
-          </button>
-        </div>
-      ) : null}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`${question.id}-false`}>False means</Label>
+              <Input
+                id={`${question.id}-false`}
+                value={question.falseCriteria}
+                onChange={(event) => onChange({ falseCriteria: event.target.value })}
+              />
+            </div>
+          </div>
+        ) : null}
 
-      {question.type === "score" ? (
-        <div className="flex flex-col gap-2">
-          {question.levels.map((level, index) => (
-            <div key={level.id} className="flex gap-2">
-              <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
-                Level {index}
-                <input
-                  value={level.label}
-                  onChange={(event) =>
+        {question.type === "choice" ? (
+          <div className="flex flex-col gap-3">
+            <Separator />
+            {question.options.map((option, index) => (
+              <div key={option.id} className="flex flex-col gap-2">
+                <div className="grid gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`${option.id}-key`}>Option {index + 1}</Label>
+                    <Input
+                      id={`${option.id}-key`}
+                      value={option.key}
+                      onChange={(event) =>
+                        onChange({
+                          options: question.options.map((item) =>
+                            item.id === option.id
+                              ? { ...item, key: event.target.value }
+                              : item,
+                          ),
+                        })
+                      }
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`${option.id}-description`}>Description</Label>
+                    <Input
+                      id={`${option.id}-description`}
+                      value={option.description}
+                      onChange={(event) =>
+                        onChange({
+                          options: question.options.map((item) =>
+                            item.id === option.id
+                              ? { ...item, description: event.target.value }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="self-start"
+                  onClick={() =>
                     onChange({
-                      levels: question.levels.map((item) =>
-                        item.id === level.id
-                          ? { ...item, label: event.target.value }
-                          : item,
-                      ),
+                      options: question.options.filter((item) => item.id !== option.id),
                     })
                   }
-                  className={fieldClass}
-                />
-              </label>
-              <button
-                type="button"
-                className={cn(ghostButtonClass, "mt-5")}
-                onClick={() =>
-                  onChange({
-                    levels: question.levels.filter((item) => item.id !== level.id),
-                  })
-                }
-              >
-                Remove level
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            className={cn(ghostButtonClass, "h-9 self-start")}
-            onClick={() =>
-              onChange({
-                levels: [...question.levels, { id: newId(), label: "" }],
-              })
-            }
-          >
-            Add level
-          </button>
-        </div>
-      ) : null}
-    </fieldset>
+                >
+                  Remove option
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() =>
+                onChange({
+                  options: [
+                    ...question.options,
+                    { id: newId(), key: "", description: "" },
+                  ],
+                })
+              }
+            >
+              Add option
+            </Button>
+          </div>
+        ) : null}
+
+        {question.type === "score" ? (
+          <div className="flex flex-col gap-3">
+            <Separator />
+            {question.levels.map((level, index) => (
+              <div key={level.id} className="flex items-end gap-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Label htmlFor={`${level.id}-label`}>Level {index}</Label>
+                  <Input
+                    id={`${level.id}-label`}
+                    value={level.label}
+                    onChange={(event) =>
+                      onChange({
+                        levels: question.levels.map((item) =>
+                          item.id === level.id
+                            ? { ...item, label: event.target.value }
+                            : item,
+                        ),
+                      })
+                    }
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    onChange({
+                      levels: question.levels.filter((item) => item.id !== level.id),
+                    })
+                  }
+                >
+                  Remove level
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() =>
+                onChange({
+                  levels: [...question.levels, { id: newId(), label: "" }],
+                })
+              }
+            >
+              Add level
+            </Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -570,34 +647,84 @@ function AnswerList({
   questions: QuestionDraft[];
   confidence: Record<string, number>;
 }) {
-  const entries = Object.entries(answers);
-  if (entries.length === 0) {
-    return <p className="text-pretty text-mute text-sm">No answers returned.</p>;
+  const known = questions.map((question) => question.key).filter((key) => key in answers);
+  const extra = Object.keys(answers).filter(
+    (key) => !questions.some((question) => question.key === key),
+  );
+  const keys = [...known, ...extra];
+
+  if (keys.length === 0) {
+    return <p className="text-pretty text-muted-foreground text-sm">No answers returned.</p>;
   }
 
   return (
-    <ol className="flex flex-col gap-5">
-      {entries.map(([id, answer]) => {
+    <ol className="flex flex-col gap-3">
+      {keys.map((id) => {
+        const answer = answers[id];
+        if (!answer) return null;
         const draft = questions.find((question) => question.key === id);
         return (
-          <li key={id} className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-mono text-sm">{id}</h3>
-              <p className="font-mono text-mute text-xs tabular-nums">
-                {answer.type}
-                {confidence[id] != null
-                  ? ` · confidence ${formatProbability(confidence[id])}`
-                  : ""}
-              </p>
-            </div>
-            {draft?.instructions ? (
-              <p className="text-pretty text-mute text-sm">{draft.instructions}</p>
-            ) : null}
-            <AnswerMeter answer={answer} draft={draft} />
+          <li key={id}>
+            <AnswerCard
+              id={id}
+              answer={answer}
+              draft={draft}
+              confidence={confidence[id]}
+            />
           </li>
         );
       })}
     </ol>
+  );
+}
+
+function AnswerCard({
+  id,
+  answer,
+  draft,
+  confidence,
+}: {
+  id: string;
+  answer: Answer;
+  draft?: QuestionDraft;
+  confidence?: number;
+}) {
+  const hero =
+    answer.type === "boolean"
+      ? formatProbability(answer.probability)
+      : answer.type === "score"
+        ? formatProbability(answer.score)
+        : null;
+
+  return (
+    <Card className="min-w-0">
+      <CardHeader className="grid-cols-[minmax(0,1fr)_auto] items-center">
+        <div className="flex min-w-0 items-center gap-2">
+          <Badge className="uppercase">{TYPE_LABEL[answer.type]}</Badge>
+          <span className="truncate font-mono text-muted-foreground text-sm">{id}</span>
+        </div>
+        {hero ? (
+          <p className="font-medium text-3xl tabular-nums leading-none">{hero}</p>
+        ) : confidence != null ? (
+          <p className="font-mono text-muted-foreground text-xs tabular-nums">
+            Confidence {formatProbability(confidence)}
+          </p>
+        ) : null}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {draft?.instructions ? (
+          <p className="text-pretty text-sm">{draft.instructions}</p>
+        ) : null}
+        <AnswerMeter answer={answer} draft={draft} />
+      </CardContent>
+      {answer.type === "score" ? (
+        <CardFooter className="bg-transparent font-mono text-muted-foreground text-xs tabular-nums">
+          {confidence != null
+            ? `Confidence ${formatProbability(confidence)} · Weighted across levels`
+            : "Weighted across levels"}
+        </CardFooter>
+      ) : null}
+    </Card>
   );
 }
 
@@ -610,13 +737,12 @@ function AnswerMeter({
 }) {
   if (answer.type === "boolean") {
     return (
-      <div className="flex flex-col gap-1">
-        <div className="flex justify-between font-mono text-xs tabular-nums">
-          <span>no</span>
-          <span>{formatProbability(answer.probability)}</span>
-          <span>yes</span>
+      <div className="flex flex-col gap-2">
+        <Meter value={answer.probability} label="Yes probability" />
+        <div className="flex justify-between font-mono text-muted-foreground text-xs tabular-nums">
+          <span>0 No</span>
+          <span>1 Yes</span>
         </div>
-        <Meter value={answer.probability} />
       </div>
     );
   }
@@ -626,26 +752,21 @@ function AnswerMeter({
       draft?.options.map((option) => option.key.trim()).filter(Boolean) ??
       Object.keys(answer.probabilities ?? { [answer.choice]: 1 });
     return (
-      <div className="flex flex-col gap-2">
-        <p className="font-mono text-sm">
-          {answer.choice}
-        </p>
-        <Distribution
-          rows={keys.map((key) => ({
-            label: key,
-            value: answer.probabilities?.[key] ?? (key === answer.choice ? 1 : 0),
-          }))}
-        />
-      </div>
+      <Distribution
+        rows={keys.map((key) => ({
+          label: key,
+          value: answer.probabilities?.[key] ?? (key === answer.choice ? 1 : 0),
+        }))}
+      />
     );
   }
 
   const levels = draft?.levels.map((level) => level.label) ?? [];
-  const max = Math.max(levels.length - 1, 1);
   const rows =
     levels.length > 0
       ? levels.map((label, index) => ({
-          label: `${index} ${label}`,
+          index,
+          label,
           value: answer.probabilities?.[String(index)] ?? 0,
         }))
       : Object.entries(answer.probabilities ?? {}).map(([key, value]) => ({
@@ -653,23 +774,21 @@ function AnswerMeter({
           value,
         }));
 
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="font-mono text-sm tabular-nums">
-        {formatProbability(answer.score)}
-        <span className="text-mute"> / {max}</span>
-      </p>
-      <Meter value={answer.score / max} />
-      {rows.length > 0 ? <Distribution rows={rows} /> : null}
-    </div>
-  );
+  return rows.length > 0 ? <Distribution rows={rows} /> : null;
 }
 
-function Meter({ value }: { value: number }) {
+function Meter({ value, label }: { value: number; label: string }) {
   const width = Math.min(100, Math.max(0, value * 100));
   return (
-    <div className="h-2 bg-inset" aria-hidden="true">
-      <div className="h-full bg-meter" style={{ width: `${width}%` }} />
+    <div
+      className="h-1.5 overflow-hidden rounded-full bg-muted"
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(width)}
+    >
+      <div className="h-full rounded-full bg-primary" style={{ width: `${width}%` }} />
     </div>
   );
 }
@@ -677,53 +796,90 @@ function Meter({ value }: { value: number }) {
 function Distribution({
   rows,
 }: {
-  rows: { label: string; value: number }[];
+  rows: { label: string; value: number; index?: number }[];
 }) {
+  const max = Math.max(0, ...rows.map((row) => row.value));
+
   return (
-    <ul className="flex flex-col gap-1">
-      {rows.map((row) => (
-        <li key={row.label} className="grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-2">
-          <div className="min-w-0">
-            <p className="truncate font-mono text-xs">{row.label}</p>
-            <Meter value={row.value} />
-          </div>
-          <p className="text-right font-mono text-xs tabular-nums">
-            {formatProbability(row.value)}
-          </p>
-        </li>
-      ))}
+    <ul className="flex flex-col gap-2.5">
+      {rows.map((row) => {
+        const active = max > 0 && row.value === max;
+        return (
+          <li
+            key={`${row.index ?? ""}-${row.label}`}
+            className="grid grid-cols-[minmax(0,1fr)_minmax(4.5rem,1.5fr)_2.5rem] items-center gap-3"
+          >
+            <p
+              className={cn(
+                "min-w-0 truncate text-sm",
+                active ? "font-medium" : "text-muted-foreground",
+              )}
+              title={row.label}
+            >
+              {row.index != null ? (
+                <span className="mr-2 font-mono text-muted-foreground tabular-nums">
+                  {row.index}
+                </span>
+              ) : null}
+              {row.label}
+            </p>
+            <Meter value={row.value} label={row.label} />
+            <p className="text-right font-mono text-xs tabular-nums">
+              {formatProbability(row.value)}
+            </p>
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
 function JsonBlock({ value }: { value: string }) {
   return (
-    <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs text-pretty">
-      {value}
-    </pre>
+    <Card className="min-w-0">
+      <CardContent>
+        <pre className="max-w-full overflow-x-auto font-mono text-xs">
+          {value}
+        </pre>
+      </CardContent>
+    </Card>
   );
 }
 
-function EmptyOutput({ busy }: { busy: boolean }) {
+function EmptyOutput() {
   return (
-    <p className="text-pretty text-mute text-sm">
-      {busy
-        ? "Evaluating…"
-        : "Run Evaluate to see answers, or open Request to inspect the payload."}
-    </p>
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className="text-balance text-base">No answers yet</CardTitle>
+        <CardDescription className="text-pretty">
+          Evaluate this state to score each question.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button type="submit" form="evaluate">
+          Evaluate
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
 function AnswerSkeleton({ count }: { count: number }) {
   const n = Math.max(count, 1);
   return (
-    <div className="flex flex-col gap-5" aria-hidden="true">
+    <div className="flex flex-col gap-3">
       {Array.from({ length: n }, (_, index) => (
-        <div key={index} className="flex flex-col gap-2">
-          <div className="h-4 w-28 bg-inset" />
-          <div className="h-2 bg-inset" />
-          <div className="h-2 w-2/3 bg-inset" />
-        </div>
+        <Card key={index}>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-8 w-16" />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-1.5 w-full rounded-full" />
+            <Skeleton className="h-1.5 w-4/5 rounded-full" />
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
